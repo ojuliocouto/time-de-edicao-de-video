@@ -153,7 +153,8 @@ def conferir(amb, rapido=False):
             tem_chrome, onde = True, str(cache)
             break
     out.append(item("Chrome do HyperFrames", tem_chrome, "chrome", amb, onde, etapa="inserts e legenda"))
-    faltam_hf = [s for s in ("hyperframes", "hyperframes-core", "hyperframes-cli")
+    # so a "hyperframes": nas versoes novas a hyperframes-core foi incorporada a ela
+    faltam_hf = [s for s in ("hyperframes",)
                  if not (amb.home / ".claude" / "skills" / s / "SKILL.md").exists()]
     out.append(item("skills do HyperFrames (referencia)", not faltam_hf, "skills-hyperframes", amb,
                     ("faltam: " + ", ".join(faltam_hf)) if faltam_hf else "", obrigatorio=False,
