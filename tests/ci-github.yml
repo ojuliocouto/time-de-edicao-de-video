@@ -1,0 +1,63 @@
+# Testes da skill em Mac, Windows e Linux de verdade, pelo GitHub Actions.
+# A copia ativa fica em .github/workflows/ na raiz deste repositorio.
+# Roda a cada push (ou a mao, em Actions > Run workflow).
+#
+# O passo a passo de instalacao e o mesmo de references/instalacao.md: o teste
+# tambem prova que a instalacao documentada funciona em cada sistema.
+name: time-de-edicao-de-video
+
+on:
+  push:
+    paths: ["**"]
+  workflow_dispatch:
+
+jobs:
+  testes:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      FASTER_WHISPER_MODELO: small
+      PYTHONUTF8: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: ffmpeg e fonte (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-liberation
+      - name: ffmpeg (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
+      - name: ffmpeg (Mac)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: venv de transcricao (como no instalacao.md)
+        run: |
+          python -m venv ~/.venv-whisper
+          if [ "$RUNNER_OS" = "Windows" ]; then V=~/.venv-whisper/Scripts/python.exe; else V=~/.venv-whisper/bin/python; fi
+          "$V" -m pip install -q --upgrade pip
+          "$V" -m pip install -q faster-whisper pillow
+
+      - name: HyperFrames e o Chrome dele
+        run: |
+          npx --yes hyperframes --version
+          npx --yes hyperframes browser ensure
+
+      - name: pre-flight
+        run: python scripts/preflight.py --rapido || true
+
+      - name: testes (estatico, unidade, integracao e completo)
+        run: python tests/rodar.py --completo

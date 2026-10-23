@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>voo-3d-tipografia</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      /* fontes da skill de legenda cinematografica, embarcadas localmente.
+         a propria skill manda copiar em vez de baixar, pra nunca depender de rede. */
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+
+      /* a lente: perspectiva estatica, nunca animada */
+      .lente {
+        position: absolute;
+        inset: 0;
+        perspective: 1400px;
+      }
+      /* o mundo: preserve-3d, sem filter, sem opacity, sem overflow */
+      .mundo {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+
+      .palavra {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        /* a ancora e o canto: assim o rotateY gira em torno do centro real do
+           plano depois do translate(-50%,-50%), e nao em torno de um ponto
+           deslocado. sem isso, quanto maior o giro, mais a palavra sai do eixo. */
+        transform-origin: 0 0;
+        --dof: 0px;
+        font-family: var(--display);
+        line-height: 0.9;
+        letter-spacing: 0.005em;
+        text-transform: uppercase;
+        color: var(--palavra);
+        white-space: nowrap;
+        opacity: 0;
+        filter: blur(var(--dof));
+        will-change: filter, opacity;
+      }
+      .palavra.acento {
+        color: var(--acento);
+      }
+
+      /* brilho fraco atras de cada palavra, pra dar corpo no preto */
+      .palavra::after {
+        content: "";
+        position: absolute;
+        inset: -60px -90px;
+        background: radial-gradient(ellipse at center, rgba(232, 163, 61, 0.1), transparent 70%);
+        z-index: -1;
+      }
+
+      #marca {
+        position: absolute;
+        left: 100px;
+        bottom: 120px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 24px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: var(--marca);
+      }
+      #trilho {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        bottom: 90px;
+        height: 3px;
+        background: rgba(242, 240, 236, 0.12);
+      }
+      #trilho i {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: var(--acento);
+        transform-origin: left center;
+        will-change: transform;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="6"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="6" data-track-index="0">
+        <div class="lente">
+          <div class="mundo" id="mundo" data-layout-allow-overflow="true"></div>
+        </div>
+        <div id="marca">Voo 3D &middot; tipografia</div>
+        <div id="trilho"><i id="trilho-fill"></i></div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      /* =====================================================================
+         MECANISMO LIDO DO TUTORIAL (Vane Motion, "3D Kinetic Typography"):
+         1. cada palavra e um plano de texto solto no espaco 3D, encaixado na
+            quina da anterior e girado no eixo Y, formando uma estrutura de
+            angulos retos;
+         2. uma camera de nó unico percorre palavra por palavra;
+         3. cada perna anima posicao, orientacao e escala, com desaceleracao
+            forte (o F9 dele mais alca puxada, que aqui vira power4.out);
+         4. o pico do movimento coincide com a palavra sendo dita;
+         5. ele anima ESCALA em vez de Z em algumas pernas, porque mexer em Z
+            faz o texto subir e descer numa curva indesejada. Aqui o mesmo
+            problema nao existe porque a pose e resolvida por trigonometria,
+            entao a chegada e sempre exata.
+         ===================================================================== */
+
+      // posicao de cada palavra no mundo, e o giro proprio dela
+      const PALAVRAS = [
+        { t: "um", x: 0, y: 0, z: 0, ry: 0, tam: 214, acento: false },
+        { t: "prompt", x: 330, y: -230, z: -680, ry: -50, tam: 250, acento: false },
+        { t: "vira", x: -290, y: -500, z: -1420, ry: 42, tam: 220, acento: false },
+        { t: "cem", x: 320, y: -770, z: -2180, ry: -46, tam: 262, acento: false },
+        { t: "peças", x: -40, y: -1060, z: -2960, ry: 0, tam: 240, acento: true },
+      ];
+      // inclinacao da camera em cada pouso, so pra nao ficar tudo no mesmo eixo
+      const CAM_RX = [6, -5, 5, -4, 0];
+
+      const mundo = document.getElementById("mundo");
+      PALAVRAS.forEach((w, i) => {
+        const el = document.createElement("div");
+        el.className = "palavra" + (w.acento ? " acento" : "");
+        el.id = "w" + i;
+        el.textContent = w.t;
+        el.style.fontSize = w.tam + "px";
+        // planos em profundidades diferentes se projetam sobrepostos: e o voo, nao defeito
+        el.setAttribute("data-layout-allow-overlap", "true");
+        // pose estatica no mundo. translate(-50%,-50%) centra o plano nele mesmo.
+        el.style.transform =
+          "translate3d(" +
+          w.x +
+          "px," +
+          w.y +
+          "px," +
+          w.z +
+          "px) rotateY(" +
+          w.ry +
+          "deg) translate(-50%,-50%)";
+        mundo.appendChild(el);
+      });
+
+      /* ---- a camera: um objeto de estado, um escritor de transform ---- */
+      const cam = { x: 0, y: 0, z: 0, rx: 0, ry: 0 };
+      function aplicarCamera() {
+        mundo.style.transform =
+          "translate3d(" +
+          cam.x +
+          "px," +
+          cam.y +
+          "px," +
+          cam.z +
+          "px) rotateX(" +
+          cam.rx +
+          "deg) rotateY(" +
+          cam.ry +
+          "deg)";
+      }
+
+      // a pose de pouso e resolvida, nao chutada: gira o ponto da palavra pelo
+      // mesmo par rotateX/rotateY da camera e translada pelo oposto do resultado.
+      const rad = (d) => (d * Math.PI) / 180;
+      function poseQueCentra(w, rx, ry) {
+        const cy = Math.cos(rad(ry)),
+          sy = Math.sin(rad(ry));
+        const cx = Math.cos(rad(rx)),
+          sx = Math.sin(rad(rx));
+        // rotateY primeiro
+        const x1 = w.x * cy + w.z * sy;
+        const y1 = w.y;
+        const z1 = -w.x * sy + w.z * cy;
+        // depois rotateX
+        const x2 = x1;
+        const y2 = y1 * cx - z1 * sx;
+        const z2 = y1 * sx + z1 * cx;
+        return { x: -x2, y: -y2, z: -z2, rx: rx, ry: ry };
+      }
+
+      const POSES = PALAVRAS.map((w, i) => poseQueCentra(w, CAM_RX[i], -w.ry));
+
+      Object.assign(cam, POSES[0]);
+      aplicarCamera();
+
+      /* ---- linha do tempo ---- */
+      const tl = gsap.timeline({ paused: true });
+      const POUSO = [0.55, 1.5, 2.45, 3.4, 4.35];
+      const PERNA = 0.72;
+      const BLUR_FORA = "16px";
+
+      // abertura: a primeira palavra ja esta enquadrada
+      tl.fromTo(
+        "#w0",
+        { opacity: 0, "--dof": BLUR_FORA },
+        { opacity: 1, "--dof": "0px", duration: 0.45, ease: "power3.out" },
+        0.12
+      );
+      tl.fromTo(
+        "#marca",
+        { autoAlpha: 0, y: 16 },
+        { autoAlpha: 1, y: 0, duration: 0.4, ease: "power3.out" },
+        0.2
+      );
+      tl.fromTo("#trilho-fill", { scaleX: 0 }, { scaleX: 1, duration: 6, ease: "none" }, 0);
+
+      for (let i = 1; i < PALAVRAS.length; i++) {
+        const inicio = POUSO[i] - PERNA;
+
+        // a palavra de destino nasce desfocada, um pouco antes da camera chegar
+        tl.fromTo(
+          "#w" + i,
+          { opacity: 0, "--dof": BLUR_FORA },
+          { opacity: 1, "--dof": BLUR_FORA, duration: 0.25, ease: "power2.out" },
+          inicio - 0.1
+        );
+
+        // a perna: pouso violento e assentamento seco, como a alca puxada do tutorial
+        tl.to(
+          cam,
+          {
+            x: POSES[i].x,
+            y: POSES[i].y,
+            z: POSES[i].z,
+            rx: POSES[i].rx,
+            ry: POSES[i].ry,
+            duration: PERNA,
+            ease: "power4.out",
+            onUpdate: aplicarCamera,
+          },
+          inicio
+        );
+
+        // foco entra junto com a chegada, e a anterior sai de foco
+        tl.to("#w" + i, { "--dof": "0px", duration: PERNA, ease: "power4.out" }, inicio);
+        tl.to(
+          "#w" + (i - 1),
+          { "--dof": BLUR_FORA, opacity: 0.45, duration: PERNA, ease: "power2.inOut" },
+          inicio
+        );
+      }
+
+      // empurrao final lento por cima da ultima palavra
+      const FIM = POSES[POSES.length - 1];
+      tl.to(
+        cam,
+        {
+          z: FIM.z + 95,
+          duration: 1.2,
+          ease: "power2.inOut",
+          onUpdate: aplicarCamera,
+        },
+        4.6
+      );
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

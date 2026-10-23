@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>cena: comparacao identica</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #mundo {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+      .cena {
+        position: absolute;
+        left: 0;
+        width: 1080px;
+        height: 1920px;
+      }
+      .rotulo {
+        position: absolute;
+        top: 300px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 26px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--acento);
+        opacity: 0;
+      }
+      .titulo {
+        position: absolute;
+        left: 110px;
+        right: 110px;
+        font-family: var(--display);
+        font-size: 100px;
+        line-height: 1.14;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        text-align: center;
+      }
+      .p {
+        display: inline-block;
+        opacity: 0;
+        will-change: transform, opacity, filter;
+      }
+
+      /* grifo de duas copias: ver primitivas.js e armadilhas.md.
+         A versao de uma copia so deixa a palavra invisivel no meio da tween. */
+      .grifo {
+        position: relative;
+        display: inline-block;
+        padding: 10px 16px;
+      }
+      .grifo > span {
+        display: block;
+        white-space: nowrap;
+      }
+      .grifo .g-clara {
+        color: var(--tinta);
+        clip-path: inset(0 0 0 calc(var(--w, 0) * 100%));
+      }
+      .grifo .g-escura {
+        position: absolute;
+        inset: 0;
+        padding: 10px 16px;
+        color: var(--fundo);
+        background: var(--acento);
+        clip-path: inset(0 calc(100% - var(--w, 0) * 100%) 0 0);
+      }
+
+      /* ---- os dois lados ---- */
+      .par {
+        position: absolute;
+        top: 560px;
+        left: 110px;
+        right: 110px;
+        height: 700px;
+        display: flex;
+        gap: 40px;
+        perspective: 1500px;
+      }
+      .lado {
+        flex: 1;
+        transform-style: preserve-3d;
+        will-change: transform, opacity;
+        opacity: 0;
+      }
+      .cartao {
+        height: 100%;
+        border-radius: 32px;
+        background: var(--painel);
+        border: 2px solid var(--borda);
+        padding: 40px 34px;
+        display: flex;
+        flex-direction: column;
+      }
+      .cabeca {
+        font-family: var(--display);
+        font-size: 68px;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        margin-bottom: 40px;
+      }
+      .barra {
+        height: 20px;
+        border-radius: 10px;
+        background: var(--borda);
+        margin-bottom: 26px;
+        transform-origin: left center;
+        transform: scaleX(0);
+        will-change: transform;
+      }
+      .barra.dest {
+        background: #33383f;
+      }
+      .selo {
+        position: absolute;
+        bottom: -26px;
+        left: 50%;
+        margin-left: -95px;
+        width: 190px;
+        height: 62px;
+        border-radius: 31px;
+        background: var(--acento);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--apoio);
+        font-weight: 700;
+        font-size: 24px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--fundo);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+      .veredito {
+        position: absolute;
+        top: 1360px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--display);
+        font-size: 132px;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        color: var(--acento);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+
+      #rodape {
+        position: absolute;
+        left: 110px;
+        bottom: 110px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 23px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--suave);
+        opacity: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="7"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="7" data-track-index="0">
+        <div id="mundo" data-layout-allow-overflow="true">
+          <!-- ===== CENA 1: os dois lados entregam a mesma coisa ===== -->
+          <div class="cena" style="top: 0">
+            <div class="rotulo" id="r1">Rotulo da cena</div>
+            <div class="titulo" id="t1" style="top: 400px; font-size: 84px">
+              <span class="p" data-layout-allow-overlap="true">frase</span>
+              <span class="p" data-layout-allow-overlap="true">de</span>
+              <span class="p" data-layout-allow-overlap="true">quatro</span>
+              <span class="p" data-layout-allow-overlap="true">palavras</span>
+            </div>
+            <div class="par">
+              <div class="lado" id="ladoA" data-layout-allow-overlap="true">
+                <div class="cartao">
+                  <div class="cabeca">lado a</div>
+                  <div class="barra dest a"></div>
+                  <div class="barra a"></div>
+                  <div class="barra a"></div>
+                  <div class="barra a"></div>
+                </div>
+                <div class="selo" id="seloA">selo</div>
+              </div>
+              <div class="lado" id="ladoB" data-layout-allow-overlap="true">
+                <div class="cartao">
+                  <div class="cabeca">lado b</div>
+                  <div class="barra dest b"></div>
+                  <div class="barra b"></div>
+                  <div class="barra b"></div>
+                  <div class="barra b"></div>
+                </div>
+                <div class="selo" id="seloB">selo</div>
+              </div>
+            </div>
+            <div class="veredito" id="ver1">veredito</div>
+          </div>
+
+          <!-- ===== CENA 2: o veredito ===== -->
+          <div class="cena" style="top: 1920px">
+            <div class="rotulo" id="r2">Rotulo 2</div>
+            <div class="titulo" id="t2" style="top: 700px">
+              <span class="p" data-layout-allow-overlap="true">fecho</span>
+              <span class="p" data-layout-allow-overlap="true">com</span>
+              <span class="p" data-layout-allow-overlap="true">grifo</span>
+              <span class="p" data-layout-allow-overlap="true">na</span>
+              <span class="p" data-layout-allow-overlap="true">ultima</span>
+              <span class="p grifo" id="grifo1" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="g-clara">palavra</span><span class="g-escura">palavra</span></span>
+            </div>
+            <div id="rodape">Rodape</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* ---------- primitivas do projeto ---------- */
+      function palavrasSubindo(sel, t, passo) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 44, filter: "blur(7px)" },
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.42,
+            stagger: passo || 0.1,
+            ease: "power3.out",
+          },
+          t
+        );
+      }
+      function quique(sel, t, dur) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, scale: 0.45 },
+          { opacity: 1, scale: 1, duration: dur || 0.42, ease: "back.out(2.8)" },
+          t
+        );
+      }
+      function grifo(sel, t) {
+        tl.fromTo(sel, { "--w": 0 }, { "--w": 1, duration: 0.42, ease: "power3.out" }, t);
+      }
+      function entra(sel, t) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 22, filter: "blur(6px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.4, ease: "power3.out" },
+          t
+        );
+      }
+      const cam = { y: 0 };
+      const mundo = document.getElementById("mundo");
+      function aplicarCamera() {
+        mundo.style.transform = "translateY(" + cam.y + "px)";
+      }
+      aplicarCamera();
+      function trocaCena(destinoY, t) {
+        tl.to(
+          cam,
+          { y: destinoY, duration: 0.7, ease: "power3.inOut", onUpdate: aplicarCamera },
+          t
+        );
+      }
+
+      /* ================= CENA 1 ================= */
+      entra("#r1", 0.1);
+      palavrasSubindo("#t1 .p", 0.28, 0.09);
+
+      // os dois cartoes chegam das laterais opostas, com inclinacao espelhada.
+      // ideia lida do split-tilt-cards do catalogo; refeita aqui porque a peca
+      // original monta as asas em container query horizontal e no 9:16 os dois
+      // cartoes ficariam estreitos demais para caber o cabecalho.
+      tl.fromTo(
+        "#ladoA",
+        { opacity: 0, x: -160, rotationY: 26 },
+        { opacity: 1, x: 0, rotationY: 6, duration: 0.62, ease: "power3.out" },
+        0.75
+      );
+      tl.fromTo(
+        "#ladoB",
+        { opacity: 0, x: 160, rotationY: -26 },
+        { opacity: 1, x: 0, rotationY: -6, duration: 0.62, ease: "power3.out" },
+        0.82
+      );
+
+      // as barras se preenchem EM SINCRONIA nos dois lados: a sincronia e a piada
+      tl.fromTo(
+        ".barra.a",
+        { scaleX: 0 },
+        { scaleX: 1, duration: 0.34, stagger: 0.11, ease: "power3.out" },
+        1.35
+      );
+      tl.fromTo(
+        ".barra.b",
+        { scaleX: 0 },
+        { scaleX: 1, duration: 0.34, stagger: 0.11, ease: "power3.out" },
+        1.35
+      );
+
+      quique("#seloA", 2.15, 0.4);
+      quique("#seloB", 2.15, 0.4);
+
+      tl.fromTo(
+        "#ver1",
+        { opacity: 0, scale: 0.7 },
+        { opacity: 1, scale: 1, duration: 0.46, ease: "back.out(3)" },
+        2.6
+      );
+
+      trocaCena(-1920, 3.5);
+
+      /* ================= CENA 2 ================= */
+      entra("#r2", 3.95);
+      palavrasSubindo("#t2 .p", 4.15, 0.1);
+      grifo("#grifo1", 4.62);
+      tl.fromTo("#rodape", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 5.4);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

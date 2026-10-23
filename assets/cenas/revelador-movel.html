@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>revelador-movel</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      /* fontes da skill de legenda cinematografica, embarcadas localmente */
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+    <!-- ===== fim do estilo ===== -->
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+
+      /* ---- campo de palavras: UMA copia so, sempre acesa.
+             quem apaga o que esta fora da lente e a mascara do yt-feather-highlight ---- */
+      .campo {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .palavra {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        font-family: var(--display);
+        font-size: 58px;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        color: var(--palavra);
+      }
+      #achadas .palavra {
+        color: var(--achada);
+        opacity: 0;
+        will-change: transform;
+      }
+
+      /* ---- yt-feather-highlight (do catalogo) ----
+         escurece o quadro inteiro menos uma elipse suave.
+         posicao e raio sao variaveis de CSS, entao a timeline as anima direto. */
+      .yt-hl {
+        --yt-hl-x: 50%;
+        --yt-hl-y: 50%;
+        --yt-hl-rx: 19%;
+        --yt-hl-ry: 10.7%;
+        --yt-hl-dim: 0.93;
+
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 1;
+        background: rgba(var(--dim-rgb), var(--yt-hl-dim));
+        -webkit-mask-image: radial-gradient(
+          ellipse var(--yt-hl-rx) var(--yt-hl-ry) at var(--yt-hl-x) var(--yt-hl-y),
+          transparent 0%,
+          transparent 52%,
+          black 88%
+        );
+        mask-image: radial-gradient(
+          ellipse var(--yt-hl-rx) var(--yt-hl-ry) at var(--yt-hl-x) var(--yt-hl-y),
+          transparent 0%,
+          transparent 52%,
+          black 88%
+        );
+      }
+
+      /* ---- o aro, so pra ler como lente e nao como holofote ---- */
+      #aro {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 330px;
+        height: 330px;
+        margin-left: -165px;
+        margin-top: -165px;
+        border-radius: 50%;
+        border: 2px solid var(--aro);
+        will-change: transform;
+      }
+      /* o cabo mora dentro do aro: herda o x/y e o solavanco de graca.
+         165 * cos(45) = 116.7, entao ele nasce na borda, na diagonal de baixo. */
+      #cabo {
+        position: absolute;
+        left: 282px;
+        top: 276px;
+        width: 200px;
+        height: 13px;
+        border-radius: 7px;
+        background: var(--aro);
+        transform: rotate(45deg);
+        transform-origin: left center;
+      }
+
+      /* ---- staggered-fade-up (do catalogo), repintado ---- */
+      .hf-catalog-staggered-fade-up {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        bottom: 300px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0 24px;
+        color: var(--frase);
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 100px;
+        line-height: 1.16;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+      }
+      .hf-catalog-staggered-fade-up span {
+        display: inline-block;
+        opacity: 0;
+        transform: translate(0, var(--hf-word-y, 0px)) scale(var(--hf-word-scale, 1));
+        filter: blur(var(--hf-word-blur, 0px));
+        will-change: transform, filter, opacity;
+      }
+
+      #regua {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        bottom: 240px;
+        height: 5px;
+        background: var(--achada);
+        transform-origin: left center;
+        will-change: transform;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="5.5"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="5.5" data-track-index="0">
+        <div id="campo" class="campo" data-layout-ignore="true"></div>
+        <div class="yt-hl" id="lente"></div>
+        <div id="achadas" class="campo"></div>
+        <div id="aro" data-layout-allow-overflow="true"><div id="cabo"></div></div>
+        <div class="hf-catalog-staggered-fade-up" id="frase"></div>
+        <div id="regua"></div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const W = 1080,
+        H = 1920;
+
+      const ALVOS = [
+        { t: "A", x: 250, y: 660 },
+        { t: "peça", x: 620, y: 790 },
+        { t: "certa", x: 330, y: 960 },
+        { t: "já", x: 745, y: 1095 },
+        { t: "existe", x: 430, y: 1245 },
+      ];
+      const RUIDO = [
+        { t: "nova", x: 760, y: 615 },
+        { t: "do zero", x: 205, y: 815 },
+        { t: "inventar", x: 700, y: 935 },
+        { t: "sozinho", x: 250, y: 1105 },
+        { t: "talvez", x: 830, y: 1235 },
+        { t: "outra", x: 545, y: 675 },
+        { t: "nunca", x: 155, y: 880 },
+        { t: "depois", x: 875, y: 810 },
+        { t: "ainda", x: 605, y: 1180 },
+        { t: "mais", x: 510, y: 1050 },
+        { t: "quase", x: 865, y: 1000 },
+        { t: "só", x: 160, y: 1245 },
+      ];
+
+      function pintar(id, lista) {
+        const alvo = document.getElementById(id);
+        lista.forEach((w, i) => {
+          const el = document.createElement("div");
+          el.className = "palavra";
+          el.textContent = w.t;
+          el.style.left = w.x + "px";
+          el.style.top = w.y + "px";
+          el.id = id + "-" + i;
+          alvo.appendChild(el);
+        });
+      }
+      pintar("campo", ALVOS.concat(RUIDO));
+      pintar("achadas", ALVOS);
+
+      const frase = document.getElementById("frase");
+      ALVOS.forEach((w, i) => {
+        const s = document.createElement("span");
+        s.textContent = w.t;
+        s.id = "frase-" + i;
+        frase.appendChild(s);
+      });
+
+      /* ---------- linha do tempo ---------- */
+      const tl = gsap.timeline({ paused: true });
+
+      const ENTRADA = { x: -180, y: 560 };
+      const SAIDA = { x: 1290, y: 1560 };
+      const CHEGADA = [0.85, 1.7, 2.55, 3.4, 4.25];
+      const VIAGEM = 0.45;
+      const pct = (v, total) => (v / total) * 100 + "%";
+
+      // estado inicial da lente e do aro
+      gsap.set("#lente", { "--yt-hl-x": pct(ENTRADA.x, W), "--yt-hl-y": pct(ENTRADA.y, H) });
+      gsap.set("#aro", { x: ENTRADA.x, y: ENTRADA.y });
+
+      // a lente e o aro andam com o mesmo tempo e a mesma curva
+      function mover(destino, quando, dur, ease) {
+        tl.to(
+          "#lente",
+          {
+            "--yt-hl-x": pct(destino.x, W),
+            "--yt-hl-y": pct(destino.y, H),
+            duration: dur,
+            ease: ease,
+          },
+          quando
+        );
+        tl.to("#aro", { x: destino.x, y: destino.y, duration: dur, ease: ease }, quando);
+      }
+
+      tl.fromTo("#campo", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3, ease: "power2.out" }, 0);
+      tl.fromTo("#aro", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3, ease: "power2.out" }, 0.1);
+
+      ALVOS.forEach((w, i) => {
+        mover({ x: w.x, y: w.y }, CHEGADA[i] - VIAGEM, VIAGEM, "power3.out");
+
+        // solavanco do aro ao pousar
+        tl.fromTo(
+          "#aro",
+          { scale: 1.14 },
+          { scale: 1, duration: 0.26, ease: "power4.out" },
+          CHEGADA[i]
+        );
+
+        // a palavra fica acesa depois que a lente passa
+        tl.fromTo(
+          "#achadas-" + i,
+          { opacity: 0, scale: 0.9 },
+          { opacity: 1, scale: 1, duration: 0.24, ease: "back.out(3.2)" },
+          CHEGADA[i] + 0.02
+        );
+
+        // receita de timeline do staggered-fade-up, com o meu tempo
+        tl.fromTo(
+          "#frase-" + i,
+          { opacity: 0, "--hf-word-y": "26px", "--hf-word-scale": 0.92, "--hf-word-blur": "6px" },
+          {
+            opacity: 1,
+            "--hf-word-y": "0px",
+            "--hf-word-scale": 1,
+            "--hf-word-blur": "0px",
+            duration: 0.3,
+            ease: "power3.out",
+          },
+          CHEGADA[i] + 0.06
+        );
+      });
+
+      // a lente sai e solta o quadro
+      mover(SAIDA, 4.6, 0.6, "power2.in");
+      tl.to("#lente", { "--yt-hl-dim": 0, duration: 0.5, ease: "power2.inOut" }, 4.65);
+      tl.to("#aro", { autoAlpha: 0, duration: 0.35, ease: "power2.in" }, 4.7);
+
+      tl.fromTo("#regua", { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: "expo.out" }, 4.7);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

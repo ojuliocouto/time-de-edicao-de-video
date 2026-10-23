@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>b2-tutorial-completo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #mundo {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+      .cena {
+        position: absolute;
+        left: 0;
+        width: 1080px;
+        height: 1920px;
+      }
+
+      /* ---------- tipografia comum ---------- */
+      .kicker {
+        position: absolute;
+        top: 300px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 26px;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--acento);
+        opacity: 0;
+      }
+      .titulo {
+        position: absolute;
+        left: 110px;
+        right: 110px;
+        font-family: var(--display);
+        font-size: 106px;
+        line-height: 1.14;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--tinta);
+      }
+      .titulo .lin {
+        display: block;
+      }
+      .p {
+        display: inline-block;
+        opacity: 0;
+        will-change: transform, opacity, filter;
+      }
+      .apoio {
+        font-family: var(--apoio);
+        font-weight: 500;
+        color: var(--suave);
+        opacity: 0;
+      }
+
+      /* grifo de duas copias: ver primitivas.js e armadilhas.md.
+         A versao de uma copia so deixa a palavra invisivel no meio da tween. */
+      .grifo {
+        position: relative;
+        display: inline-block;
+        padding: 10px 16px;
+      }
+      .grifo > span {
+        display: block;
+        white-space: nowrap;
+      }
+      .grifo .g-clara {
+        color: var(--tinta);
+        clip-path: inset(0 0 0 calc(var(--w, 0) * 100%));
+      }
+      .grifo .g-escura {
+        position: absolute;
+        inset: 0;
+        padding: 10px 16px;
+        color: var(--fundo);
+        background: var(--acento);
+        clip-path: inset(0 calc(100% - var(--w, 0) * 100%) 0 0);
+      }
+
+      /* PRIMITIVA: brilho de gradiente desfocado que se desenha */
+      .brilho {
+        position: absolute;
+        height: 190px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--brilho-a), var(--brilho-b));
+        filter: blur(64px);
+        opacity: 0.5;
+        transform-origin: left center;
+        will-change: transform;
+      }
+
+      /* PRIMITIVA: linha que se desenha com um ponto preso na ponta */
+      .trilha {
+        position: absolute;
+        height: 4px;
+        background: var(--linha);
+      }
+      .trilha i {
+        position: absolute;
+        inset: 0;
+        background: var(--acento);
+        transform-origin: left center;
+        transform: scaleX(0);
+        will-change: transform;
+      }
+      .trilha b {
+        position: absolute;
+        top: -13px;
+        left: -15px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--acento);
+        opacity: 0;
+        will-change: transform;
+      }
+
+      /* ---------- CENA 2: aneis em direcoes opostas ---------- */
+      .orbita-wrap {
+        position: absolute;
+        top: 520px;
+        left: 50%;
+        margin-left: -420px;
+        width: 840px;
+        height: 840px;
+      }
+      .anel {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        border-radius: 50%;
+        border: 3px solid var(--linha);
+        transform: translate(-50%, -50%);
+        opacity: 0;
+      }
+      .giro {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 0;
+        height: 0;
+        will-change: transform;
+      }
+      .icone {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 108px;
+        height: 108px;
+        margin-left: -54px;
+        margin-top: -54px;
+      }
+      .icone .face {
+        width: 108px;
+        height: 108px;
+        border-radius: 28px;
+        background: #ffffff;
+        box-shadow:
+          0 12px 28px rgba(22, 24, 28, 0.14),
+          0 2px 5px rgba(22, 24, 28, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 46px;
+        color: var(--tinta);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+      #nucleo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 180px;
+        height: 180px;
+        margin-left: -90px;
+        margin-top: -90px;
+        border-radius: 46px;
+        background: var(--tinta);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 68px;
+        color: var(--fundo);
+        opacity: 0;
+        will-change: transform;
+      }
+
+      /* ---------- CENA 3: anel de progresso + contador ---------- */
+      .medidor {
+        position: absolute;
+        top: 560px;
+        left: 50%;
+        margin-left: -320px;
+        width: 640px;
+        height: 640px;
+      }
+      .medidor svg {
+        width: 640px;
+        height: 640px;
+        transform: rotate(-90deg);
+      }
+      #arco-base {
+        fill: none;
+        stroke: var(--linha);
+        stroke-width: 26;
+        stroke-linecap: round;
+      }
+      #arco {
+        fill: none;
+        stroke: var(--traco, #2f8f5b);
+        stroke-width: 26;
+        stroke-linecap: round;
+        will-change: stroke-dashoffset;
+      }
+      #num {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 168px;
+        letter-spacing: 0.01em;
+        color: var(--traco-num, #2f8f5b);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* ---------- CENA 4: card subindo com sombra ---------- */
+      .card {
+        position: absolute;
+        top: 520px;
+        left: 50%;
+        margin-left: -350px;
+        width: 700px;
+        height: 470px;
+        border-radius: 34px;
+        background: #ffffff;
+        box-shadow:
+          -26px 34px 70px rgba(22, 24, 28, 0.18),
+          -6px 10px 20px rgba(22, 24, 28, 0.1);
+        padding: 44px;
+        opacity: 0;
+        will-change: transform, opacity, filter;
+      }
+      .card .barra {
+        height: 16px;
+        border-radius: 8px;
+        background: var(--linha);
+        margin-bottom: 26px;
+      }
+      .card .barra.curta {
+        width: 45%;
+        background: var(--acento);
+      }
+      .card .barra.media {
+        width: 78%;
+      }
+      .card .barra.longa {
+        width: 92%;
+      }
+      .desliza {
+        position: absolute;
+        left: 110px;
+        right: 110px;
+        font-family: var(--display);
+        font-size: 108px;
+        line-height: 1.12;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--tinta);
+      }
+      .desliza .hot {
+        color: var(--acento);
+      }
+
+      #rodape {
+        position: absolute;
+        left: 110px;
+        bottom: 110px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 24px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--suave);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="11"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="11" data-track-index="0">
+        <div id="mundo" data-layout-allow-overflow="true">
+          <!-- ================= CENA 1 ================= -->
+          <div class="cena" id="cena1" style="top: 0">
+            <div class="brilho" id="brilho1" style="top: 1000px; left: -120px; width: 940px"></div>
+            <div class="kicker" id="k1">Rotina de conteúdo</div>
+            <div class="titulo" id="t1" style="top: 620px">
+              <span class="lin"
+                ><span class="p" data-layout-allow-overlap="true">seu</span>
+                <span class="p" data-layout-allow-overlap="true">conteúdo</span></span
+              >
+              <span class="lin"
+                ><span class="p" data-layout-allow-overlap="true">vive</span>
+                <span class="p" data-layout-allow-overlap="true">espalhado</span></span
+              >
+              <span class="lin"
+                ><span class="p" data-layout-allow-overlap="true">em</span>
+                <span class="p grifo" id="grifo1" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"
+                  ><span class="g-clara">dez lugares</span><span class="g-escura">dez lugares</span></span
+                ></span
+              >
+            </div>
+            <div class="trilha" id="tr1" style="top: 1230px; left: 110px; width: 860px">
+              <i></i><b></b>
+            </div>
+            <div class="apoio" id="leg1" style="position: absolute; top: 1300px; left: 110px; font-size: 30px">
+              e nenhum conversa com o outro
+            </div>
+          </div>
+
+          <!-- ================= CENA 2 ================= -->
+          <div class="cena" id="cena2" style="top: 1920px">
+            <div class="orbita-wrap">
+              <div class="anel" id="anel-in" style="width: 380px; height: 380px"></div>
+              <div class="anel" id="anel-mid" style="width: 600px; height: 600px"></div>
+              <div class="anel" id="anel-out" style="width: 800px; height: 800px"></div>
+              <div class="giro" id="giro-in"></div>
+              <div class="giro" id="giro-mid"></div>
+              <div class="giro" id="giro-out"></div>
+              <div id="nucleo">1</div>
+            </div>
+            <div class="titulo" id="t2" style="top: 1420px; text-align: center">
+              <span class="p" data-layout-allow-overlap="true">dez</span>
+              <span class="p" data-layout-allow-overlap="true">abas</span>
+              <span class="p" data-layout-allow-overlap="true">abertas</span>
+            </div>
+          </div>
+
+          <!-- ================= CENA 3 ================= -->
+          <div class="cena" id="cena3" style="top: 3840px">
+            <div class="brilho" id="brilho2" style="top: 1600px; left: 60px; width: 900px"></div>
+            <div class="medidor">
+              <svg viewBox="0 0 640 640">
+                <circle id="arco-base" cx="320" cy="320" r="286" />
+                <circle id="arco" cx="320" cy="320" r="286" />
+              </svg>
+              <div id="num">100%</div>
+            </div>
+            <div class="titulo" id="t3" style="top: 1330px; text-align: center; font-size: 88px">
+              <span class="p" data-layout-allow-overlap="true">do</span>
+              <span class="p" data-layout-allow-overlap="true">seu</span>
+              <span class="p" data-layout-allow-overlap="true">tempo</span>
+            </div>
+            <div
+              class="apoio"
+              id="leg3"
+              style="position: absolute; top: 1490px; left: 0; width: 100%; text-align: center; font-size: 32px"
+            >
+              vira isso aqui
+            </div>
+          </div>
+
+          <!-- ================= CENA 4 ================= -->
+          <div class="cena" id="cena4" style="top: 5760px">
+            <div class="card" id="card1">
+              <div class="barra curta"></div>
+              <div class="barra longa"></div>
+              <div class="barra media"></div>
+              <div class="barra longa"></div>
+              <div class="barra media"></div>
+            </div>
+            <div class="desliza" id="d1" style="top: 1150px">
+              <span class="p" data-layout-allow-overlap="true">um</span>
+              <span class="p" data-layout-allow-overlap="true">lugar</span>
+              <span class="p hot" data-layout-allow-overlap="true">só</span>
+            </div>
+            <div class="trilha" id="tr2" style="top: 1370px; left: 110px; width: 860px">
+              <i></i><b></b>
+            </div>
+            <div id="rodape">Teste B2 &middot; tutorial completo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* =====================================================================
+         AS PRIMITIVAS DO TUTORIAL, cada uma como uma funcao reutilizavel.
+         A cena e so a combinacao delas: e isso que faz o catalogo crescer
+         sem virar uma lista de cenas soltas.
+         ===================================================================== */
+
+      // 1. texto palavra a palavra, subindo, com desfoque resolvendo
+      function palavrasSubindo(sel, t, passo) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 46, filter: "blur(7px)" },
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.44,
+            stagger: passo || 0.1,
+            ease: "power3.out",
+          },
+          t
+        );
+      }
+
+      // 2. texto palavra a palavra, deslizando pelo eixo X
+      function palavrasDeslizando(sel, t, passo) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, x: -70, filter: "blur(6px)" },
+          {
+            opacity: 1,
+            x: 0,
+            filter: "blur(0px)",
+            duration: 0.46,
+            stagger: passo || 0.1,
+            ease: "power3.out",
+          },
+          t
+        );
+      }
+
+      // 3. entrada com quique
+      function quique(sel, t, dur) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, scale: 0.45 },
+          { opacity: 1, scale: 1, duration: dur || 0.44, ease: "back.out(2.8)" },
+          t
+        );
+      }
+
+      // 4 + 5. linha que se desenha com o ponto preso na ponta
+      function linhaComPonto(sel, t, largura, dur) {
+        tl.fromTo(sel + " b", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.18 }, t - 0.05);
+        tl.fromTo(sel + " i", { scaleX: 0 }, { scaleX: 1, duration: dur, ease: "power2.inOut" }, t);
+        tl.fromTo(sel + " b", { x: 0 }, { x: largura, duration: dur, ease: "power2.inOut" }, t);
+      }
+
+      // 6. grifo que abre por tras da palavra
+      function grifo(sel, t) {
+        tl.fromTo(sel, { "--w": 0 }, { "--w": 1, duration: 0.42, ease: "power3.out" }, t);
+      }
+
+      // 12. brilho de gradiente desfocado que se desenha
+      function brilho(sel, t, giro) {
+        tl.fromTo(
+          sel,
+          { scaleX: 0, opacity: 0, rotation: giro || -12 },
+          { scaleX: 1, opacity: 0.5, duration: 1.1, ease: "power2.out" },
+          t
+        );
+      }
+
+      // 13. card subindo de baixo com sombra direcional
+      function cardSubindo(sel, t) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 200, scale: 0.94, filter: "blur(8px)" },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            filter: "blur(0px)",
+            duration: 0.75,
+            ease: "power3.out",
+          },
+          t
+        );
+      }
+
+      /* ---------- a camera 2D em pernas encadeadas ---------- */
+      const cam = { s: 1, y: 0 };
+      const mundo = document.getElementById("mundo");
+      function aplicarCamera() {
+        mundo.style.transform = "translateY(" + cam.y + "px) scale(" + cam.s + ")";
+      }
+      aplicarCamera();
+
+      function aproxima(alvo, t, dur, ease) {
+        tl.to(cam, { s: alvo, duration: dur, ease: ease, onUpdate: aplicarCamera }, t);
+      }
+      function trocaCena(destinoY, t) {
+        tl.to(
+          cam,
+          { y: destinoY, s: 1, duration: 0.8, ease: "power3.inOut", onUpdate: aplicarCamera },
+          t
+        );
+      }
+
+      /* ================= CENA 1 ================= */
+      brilho("#brilho1", 0.05, -10);
+      tl.fromTo("#k1", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0.1);
+      palavrasSubindo("#t1 .p", 0.3, 0.1);
+      grifo("#grifo1", 0.78);
+      linhaComPonto("#tr1", 1.25, 860, 1.0);
+      tl.fromTo("#leg1", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 1.6);
+      aproxima(1.05, 0.2, 2.2, "power1.inOut");
+      aproxima(1.13, 2.45, 0.32, "power2.in");
+      tl.to("#leg1", { opacity: 0, duration: 0.25, ease: "power2.in" }, 2.6);
+      trocaCena(-1920, 2.8);
+
+      /* ================= CENA 2: aneis em direcoes opostas ================= */
+      // cada camada tem seus icones, seu raio, seu giro e sua velocidade
+      const CAMADAS = [
+        { id: "giro-in", raio: 190, rotulos: ["A", "B"], giro: 30, dur: 3.0, base: -90 },
+        { id: "giro-mid", raio: 300, rotulos: ["C", "D", "E"], giro: -22, dur: 3.4, base: -34 },
+        { id: "giro-out", raio: 400, rotulos: ["F", "G", "H"], giro: 16, dur: 3.8, base: -152 },
+      ];
+      let n = 0;
+      CAMADAS.forEach((cam2) => {
+        const pai = document.getElementById(cam2.id);
+        cam2.rotulos.forEach((r, i) => {
+          const ang = cam2.base + (360 / cam2.rotulos.length) * i;
+          const rd = (ang * Math.PI) / 180;
+          const el = document.createElement("div");
+          el.className = "icone";
+          el.style.transform =
+            "translate(" + Math.cos(rd) * cam2.raio + "px," + Math.sin(rd) * cam2.raio + "px)";
+          const face = document.createElement("div");
+          face.className = "face";
+          face.id = "face" + n;
+          face.textContent = r;
+          el.appendChild(face);
+          pai.appendChild(el);
+          quique("#face" + n, 3.75 + n * 0.07, 0.4);
+          // a face contra-gira pra continuar legivel enquanto a camada gira
+          tl.to("#face" + n, { rotation: -cam2.giro, duration: cam2.dur, ease: "power1.inOut" }, 3.95);
+          n++;
+        });
+        tl.to("#" + cam2.id, { rotation: cam2.giro, duration: cam2.dur, ease: "power1.inOut" }, 3.95);
+      });
+
+      tl.fromTo(
+        ["#anel-in", "#anel-mid", "#anel-out"],
+        { scale: 0.72, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.55, stagger: 0.08, ease: "power3.out" },
+        3.45
+      );
+      quique("#nucleo", 4.3, 0.5);
+      palavrasSubindo("#t2 .p", 4.7, 0.09);
+      aproxima(1.06, 3.6, 2.4, "power1.inOut");
+      trocaCena(-3840, 6.1);
+
+      /* ================= CENA 3: anel de progresso + contador ================= */
+      const arco = document.getElementById("arco");
+      const num = document.getElementById("num");
+      const VOLTA = 2 * Math.PI * 286;
+      arco.style.strokeDasharray = VOLTA;
+      arco.style.strokeDashoffset = 0;
+
+      brilho("#brilho2", 6.35, 8);
+      tl.fromTo(
+        ".medidor",
+        { opacity: 0, scale: 0.85 },
+        { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" },
+        6.4
+      );
+
+      // 10 + 11. o arco se desvia e a cor caminha junto do valor
+      const estado = { v: 100 };
+      tl.fromTo(
+        arco,
+        { strokeDashoffset: 0 },
+        { strokeDashoffset: VOLTA * 0.74, duration: 1.5, ease: "power2.inOut" },
+        6.8
+      );
+      tl.fromTo(
+        [".medidor", "#num"],
+        { "--traco": "#2f8f5b", "--traco-num": "#2f8f5b" },
+        {
+          "--traco": "#c4302e",
+          "--traco-num": "#c4302e",
+          duration: 1.5,
+          ease: "power2.inOut",
+        },
+        6.8
+      );
+      tl.to(
+        estado,
+        {
+          v: 26,
+          duration: 1.5,
+          ease: "power2.inOut",
+          onUpdate: () => {
+            num.textContent = Math.round(estado.v) + "%";
+          },
+        },
+        6.8
+      );
+
+      palavrasSubindo("#t3 .p", 7.6, 0.09);
+      tl.fromTo("#leg3", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 8.05);
+      aproxima(1.07, 6.95, 1.6, "power1.inOut");
+      trocaCena(-5760, 8.7);
+
+      /* ================= CENA 4: card subindo + texto deslizando ================= */
+      cardSubindo("#card1", 9.05);
+      palavrasDeslizando("#d1 .p", 9.5, 0.11);
+      linhaComPonto("#tr2", 9.9, 860, 0.8);
+      tl.fromTo("#rodape", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 10.2);
+      aproxima(1.05, 9.55, 1.4, "power1.inOut");
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>quatro-buracos</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== ESTILO DO PROJETO, escuro de proposito, pra provar que as
+         primitivas nao carregam paleta ===== -->
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #mundo {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+      .cena {
+        position: absolute;
+        left: 0;
+        width: 1080px;
+        height: 1920px;
+      }
+      .rotulo {
+        position: absolute;
+        top: 330px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 24px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--acento);
+        opacity: 0;
+      }
+      .frase {
+        position: absolute;
+        top: 640px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--display);
+        font-size: 96px;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        opacity: 0;
+      }
+
+      /* ---- BURACO 3: troca no mesmo lugar ---- */
+      .slot {
+        position: absolute;
+        top: 790px;
+        left: 0;
+        width: 100%;
+        height: 190px;
+        overflow: hidden;
+        opacity: 0;
+      }
+      .slot span {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 150px;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--acento);
+        will-change: transform;
+      }
+
+      /* ---- BURACO 5: um vira muitos ---- */
+      .grade {
+        position: absolute;
+        top: 810px;
+        left: 50%;
+        margin-left: -420px;
+        width: 840px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 24px;
+      }
+      .grade .celula {
+        aspect-ratio: 1;
+        border-radius: 26px;
+        background: var(--painel);
+        border: 2px solid var(--borda);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--display);
+        font-size: 40px;
+        color: var(--suave);
+        opacity: var(--c-op, 0);
+        transform: translateY(var(--c-y, 26px)) scale(var(--c-s, 0.7));
+        will-change: transform, opacity;
+      }
+      .grade .celula.viva {
+        color: var(--acento);
+        border-color: var(--acento);
+      }
+
+      /* ---- BURACO 6: camadas separando ---- */
+      .palco3d {
+        position: absolute;
+        top: 560px;
+        left: 50%;
+        margin-left: -360px;
+        width: 720px;
+        height: 720px;
+        perspective: 1400px;
+      }
+      .pilha {
+        position: absolute;
+        inset: 0;
+        transform-style: preserve-3d;
+      }
+      .painel {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 520px;
+        height: 340px;
+        margin-left: -260px;
+        margin-top: -170px;
+        border-radius: 30px;
+        background: var(--painel);
+        border: 2px solid var(--borda);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        padding: 34px;
+        opacity: 0;
+        transform: translate3d(var(--px, 0px), var(--py, 0px), var(--pz, -80px))
+          rotateY(var(--pry, -20deg)) rotateX(var(--prx, 12deg));
+        will-change: transform, opacity;
+      }
+      .painel .lin {
+        height: 14px;
+        border-radius: 7px;
+        background: var(--borda);
+        margin-bottom: 20px;
+      }
+      .painel .lin.a {
+        width: 42%;
+        background: var(--acento);
+      }
+      .painel .lin.b {
+        width: 88%;
+      }
+      .painel .lin.c {
+        width: 66%;
+      }
+
+      /* ---- BURACO 8: giro que transforma ---- */
+      .morfo-palco {
+        position: absolute;
+        top: 700px;
+        left: 50%;
+        margin-left: -300px;
+        width: 600px;
+        height: 420px;
+        perspective: 1300px;
+      }
+      #morfo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 460px;
+        height: 130px;
+        margin-left: -230px;
+        margin-top: -65px;
+        transform-origin: 50% 50%;
+        transform-style: preserve-3d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        will-change: transform, border-radius, background;
+      }
+      #morfo-antes,
+      #morfo-depois {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        font-family: var(--display);
+        text-transform: uppercase;
+        letter-spacing: 0.01em;
+      }
+      #morfo-antes {
+        font-size: 46px;
+        color: var(--fundo);
+      }
+      #morfo-depois {
+        font-size: 40px;
+        color: var(--tinta);
+        opacity: 0;
+      }
+      #morfo-depois small {
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 26px;
+        letter-spacing: 0.1em;
+        color: var(--acento);
+      }
+
+      #rodape {
+        position: absolute;
+        left: 110px;
+        bottom: 110px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 23px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--suave);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="9"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="9" data-track-index="0">
+        <div id="mundo" data-layout-allow-overflow="true">
+          <!-- ===== CENA 1: troca no mesmo lugar ===== -->
+          <div class="cena" style="top: 0">
+            <div class="rotulo" id="r1">Troca no mesmo lugar</div>
+            <div class="frase" id="f1">o mesmo roteiro vira</div>
+            <div class="slot" id="slot1" data-layout-allow-overlap="true">
+              <span>reels</span><span>carrossel</span><span>email</span><span>tudo</span>
+            </div>
+          </div>
+
+          <!-- ===== CENA 2: um vira muitos ===== -->
+          <div class="cena" style="top: 1920px">
+            <div class="rotulo" id="r2">Um vira muitos</div>
+            <div class="frase" id="f2">uma peça, dez cortes</div>
+            <div class="grade" id="grade1"></div>
+          </div>
+
+          <!-- ===== CENA 3: camadas separando ===== -->
+          <div class="cena" style="top: 3840px">
+            <div class="rotulo" id="r3">Camadas separando</div>
+            <div class="palco3d">
+              <div class="pilha" id="pilha1"></div>
+            </div>
+            <div class="frase" id="f3" style="top: 1360px">o que estava junto</div>
+          </div>
+
+          <!-- ===== CENA 4: giro que transforma ===== -->
+          <div class="cena" style="top: 5760px">
+            <div class="rotulo" id="r4">Giro que transforma</div>
+            <div class="morfo-palco">
+              <div id="morfo">
+                <div id="morfo-antes">gerar</div>
+                <div id="morfo-depois">pronto<small>4 peças</small></div>
+              </div>
+            </div>
+            <div class="frase" id="f4" style="top: 1300px">de um clique</div>
+            <div id="rodape">Quatro buracos &middot; primitivas novas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* =====================================================================
+         AS QUATRO PRIMITIVAS NOVAS, cada uma fechando um buraco do eixo de
+         efeito. Todas lidas de peca do catalogo, nao deduzidas.
+         ===================================================================== */
+
+      // BURACO 3, troca no mesmo lugar   (lido de: kinetic-type-swap)
+      // O que sai chicoteia pra fora da fresta com power4.in ANTES do que entra
+      // cruzar o centro. As duas fases se cruzam so por ~10% do rolo, entao
+      // nenhum quadro mostra duas palavras legiveis ao mesmo tempo.
+      function trocaNoLugar(sel, tempos, dur) {
+        const itens = gsap.utils.toArray(sel + " span");
+        gsap.set(itens, { yPercent: 100, opacity: 0 });
+        gsap.set(itens[0], { yPercent: 0, opacity: 1 });
+        tempos.forEach((quando, k) => {
+          const sai = itens[k],
+            entra = itens[k + 1];
+          if (!entra) return;
+          const dSai = dur * 0.55,
+            entrada = quando + dur * 0.45;
+          tl.to(sai, { yPercent: -112, duration: dSai, ease: "power4.in" }, quando);
+          tl.set(sai, { opacity: 0 }, quando + dSai);
+          tl.set(entra, { opacity: 1 }, entrada);
+          tl.fromTo(
+            entra,
+            { yPercent: 100 },
+            { yPercent: 0, duration: dur * 0.55, ease: "power3.out" },
+            entrada
+          );
+        });
+      }
+
+      // BURACO 5, um vira muitos   (lido de: stagger-lattice)
+      // O segredo e o stagger com consciencia de grade: from "center" mais
+      // grid [linhas, colunas] faz o espalhamento irradiar do meio pra fora,
+      // em vez de varrer em fila.
+      function umViraMuitos(sel, t, grade, passo) {
+        tl.fromTo(
+          sel + " .celula",
+          { "--c-y": "26px", "--c-s": 0.7, "--c-op": 0 },
+          {
+            "--c-y": "0px",
+            "--c-s": 1,
+            "--c-op": 1,
+            duration: 0.32,
+            stagger: { each: passo || 0.1, from: "center", grid: grade },
+            ease: "power2.out",
+          },
+          t
+        );
+      }
+
+      // BURACO 6, camadas separando   (lido de: camera-rig-depth-stack)
+      // Cada painel viaja em Z, rotateY e rotateX ao mesmo tempo, escalonado,
+      // debaixo de UMA perspectiva so. A pilha vira leque em profundidade.
+      function camadasSeparando(sel, t, dur) {
+        const paineis = gsap.utils.toArray(sel + " .painel");
+        const n = paineis.length;
+        paineis.forEach((el, i) => {
+          const k = i - (n - 1) / 2; // centraliza o leque
+          tl.fromTo(
+            el,
+            { "--px": "0px", "--py": "0px", "--pz": "-80px", "--pry": "-22deg", "--prx": "14deg", opacity: 0 },
+            {
+              "--px": k * 62 + "px",
+              "--py": k * 132 + "px",
+              "--pz": k * 130 + "px",
+              "--pry": "-14deg",
+              "--prx": "10deg",
+              opacity: 1,
+              duration: dur || 1.2,
+              ease: "power3.out",
+            },
+            t + i * 0.09
+          );
+        });
+      }
+
+      // BURACO 8, giro que transforma   (lido da regra card-morph-anchor)
+      // Largura e altura sao proibidas de animar, entao o tamanho aparente vem
+      // de scale. Forma, canto, cor e sombra viajam numa tween SO, com uma
+      // curva so. O conteudo velho sai nos primeiros 40% e o novo entra nos
+      // ultimos 40%: o vao no meio e a piscada natural da troca.
+      function giroQueTransforma(alvo, antes, depois, t, dur, pose) {
+        tl.to(
+          alvo,
+          {
+            scaleX: pose.sx,
+            scaleY: pose.sy,
+            rotationY: pose.ry,
+            borderRadius: pose.raio,
+            backgroundColor: pose.cor,
+            duration: dur,
+            ease: "power3.inOut",
+          },
+          t
+        );
+        tl.to(antes, { opacity: 0, duration: dur * 0.4, ease: "power2.in" }, t);
+        tl.to(depois, { opacity: 1, duration: dur * 0.4, ease: "power2.out" }, t + dur * 0.6);
+      }
+
+      /* ---- camera 2D em pernas encadeadas ---- */
+      const cam = { s: 1, y: 0 };
+      const mundo = document.getElementById("mundo");
+      function aplicarCamera() {
+        mundo.style.transform = "translateY(" + cam.y + "px) scale(" + cam.s + ")";
+      }
+      aplicarCamera();
+      function trocaCena(destinoY, t) {
+        tl.to(
+          cam,
+          { y: destinoY, duration: 0.7, ease: "power3.inOut", onUpdate: aplicarCamera },
+          t
+        );
+      }
+      function entra(sel, t) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 26, filter: "blur(6px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.42, ease: "power3.out" },
+          t
+        );
+      }
+
+      /* ---- monta a grade e a pilha ---- */
+      const grade = document.getElementById("grade1");
+      for (let i = 0; i < 15; i++) {
+        const c = document.createElement("div");
+        c.className = "celula" + (i === 7 ? " viva" : "");
+        c.textContent = i + 1;
+        grade.appendChild(c);
+      }
+      const pilha = document.getElementById("pilha1");
+      for (let i = 0; i < 4; i++) {
+        const p = document.createElement("div");
+        p.className = "painel";
+        p.setAttribute("data-layout-allow-overlap", "true");
+        p.innerHTML = '<div class="lin a"></div><div class="lin b"></div><div class="lin c"></div>';
+        pilha.appendChild(p);
+      }
+
+      /* ================= CENA 1 ================= */
+      entra("#r1", 0.1);
+      entra("#f1", 0.3);
+      tl.fromTo("#slot1", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power2.out" }, 0.55);
+      trocaNoLugar("#slot1", [1.1, 1.75, 2.4], 0.55);
+      trocaCena(-1920, 3.25);
+
+      /* ================= CENA 2 ================= */
+      entra("#r2", 3.6);
+      entra("#f2", 3.75);
+      umViraMuitos("#grade1", 3.95, [3, 5], 0.1);   // 0,035 dava 1 frame: nao existia
+      trocaCena(-3840, 5.25);
+
+      /* ================= CENA 3 ================= */
+      entra("#r3", 5.6);
+      camadasSeparando("#pilha1", 5.75, 1.15);
+      entra("#f3", 6.5);
+      trocaCena(-5760, 7.05);
+
+      /* ================= CENA 4 ================= */
+      entra("#r4", 7.4);
+      tl.fromTo(
+        "#morfo",
+        { opacity: 0, scale: 0.9, backgroundColor: "#888888"  /* usar var do estilo.md do projeto */, borderRadius: 65 },
+        { opacity: 1, scale: 1, duration: 0.4, ease: "power3.out" },
+        7.5
+      );
+      giroQueTransforma("#morfo", "#morfo-antes", "#morfo-depois", 7.95, 0.9, {
+        sx: 1.22,
+        sy: 2.9,
+        ry: 360,
+        raio: 34,
+        cor: "#1a1d22",
+      });
+      entra("#f4", 8.5);
+      tl.fromTo("#rodape", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 8.6);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

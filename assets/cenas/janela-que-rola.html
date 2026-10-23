@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>cena: janela que rola</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+
+    <style>
+      @font-face {
+        font-family: "Anton";
+        src: url("assets/fonts/Anton-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("assets/fonts/Inter-Variable.ttf") format("truetype");
+        font-weight: 100 900;
+        font-display: block;
+      }
+    </style>
+
+    <!-- ===== PALETA DE EXEMPLO. Nao e estilo de projeto nenhum.
+         Trocar pela paleta do estilo.md do seu projeto. ===== -->
+    <style id="estilo">
+      :root {
+        --fundo: #101216;
+        --tinta: #f2f0ec;
+        --suave: #7a8089;
+        --acento: #888888;
+        --painel: #1a1d22;
+        --borda: #2a2e35;
+        --display: "Anton", sans-serif;
+        --apoio: "InterVar", sans-serif;
+      }
+    </style>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+      #stage {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--fundo);
+      }
+
+      .rotulo {
+        position: absolute;
+        top: 250px;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 26px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--acento);
+        opacity: 0;
+      }
+      .titulo {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        font-family: var(--display);
+        font-size: 92px;
+        line-height: 1.14;
+        letter-spacing: 0.008em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        text-align: center;
+      }
+      .p {
+        display: inline-block;
+        opacity: 0;
+        will-change: transform, opacity, filter;
+      }
+      /* grifo de duas copias: ver primitivas.js e armadilhas.md.
+         A versao de uma copia so deixa a palavra invisivel no meio da tween. */
+      .grifo {
+        position: relative;
+        display: inline-block;
+        padding: 10px 16px;
+      }
+      .grifo > span {
+        display: block;
+        white-space: nowrap;
+      }
+      .grifo .g-clara {
+        color: var(--tinta);
+        clip-path: inset(0 0 0 calc(var(--w, 0) * 100%));
+      }
+      .grifo .g-escura {
+        position: absolute;
+        inset: 0;
+        padding: 10px 16px;
+        color: var(--fundo);
+        background: var(--acento);
+        clip-path: inset(0 calc(100% - var(--w, 0) * 100%) 0 0);
+      }
+
+      /* ---------- a janela de navegador, inclinada ---------- */
+      #palco {
+        position: absolute;
+        top: 620px;
+        left: 50%;
+        margin-left: -450px;
+        width: 900px;
+        height: 660px;
+        perspective: 1800px;
+        opacity: 0;
+      }
+      #janela {
+        position: absolute;
+        inset: 0;
+        border-radius: 26px;
+        overflow: hidden;
+        background: #ffffff;
+        border: 2px solid var(--borda);
+        box-shadow:
+          0 46px 90px rgba(0, 0, 0, 0.62),
+          0 10px 26px rgba(0, 0, 0, 0.4);
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+      .chrome {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 54px;
+        background: #1c2027;
+        border-bottom: 1px solid #2b313a;
+        display: flex;
+        align-items: center;
+        padding: 0 22px;
+        gap: 10px;
+        z-index: 3;
+      }
+      .chrome i {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #3a424d;
+      }
+      .chrome .url {
+        margin-left: 18px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 21px;
+        color: #8b939f;
+        letter-spacing: 0.02em;
+      }
+      /* a fresta por onde a pagina rola */
+      #fresta {
+        position: absolute;
+        top: 54px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+      }
+      .pagina {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 900px;
+        will-change: transform;
+      }
+      #pg-docs {
+        opacity: 0;
+      }
+      #pg-repo {
+        opacity: 0;
+      }
+      /* o video mora na mesma fresta */
+      #video-slot {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        background: #0d0e11;
+      }
+      #clipe {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 900px;
+        margin-top: -253px;
+      }
+
+      /* ---------- etiquetas em volta da janela ---------- */
+      .etiqueta {
+        position: absolute;
+        padding: 15px 26px;
+        border-radius: 999px;
+        background: var(--painel);
+        border: 2px solid var(--borda);
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 27px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--tinta);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+      .etiqueta.on {
+        border-color: var(--acento);
+        color: var(--acento);
+      }
+
+      #comando {
+        position: absolute;
+        top: 1400px;
+        left: 50%;
+        margin-left: -420px;
+        width: 840px;
+        padding: 26px 32px;
+        border-radius: 18px;
+        background: #05070a;
+        border: 2px solid var(--borda);
+        font-family: var(--apoio);
+        font-weight: 600;
+        font-size: 32px;
+        letter-spacing: 0.01em;
+        color: #7ee2a8;
+        opacity: 0;
+        white-space: nowrap;
+        will-change: transform, opacity;
+      }
+      #comando b {
+        color: var(--suave);
+        font-weight: 500;
+      }
+
+      #rodape {
+        position: absolute;
+        left: 100px;
+        bottom: 105px;
+        font-family: var(--apoio);
+        font-weight: 500;
+        font-size: 23px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--suave);
+        opacity: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="stage"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="12"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div id="shot" class="clip" data-start="0" data-duration="12" data-track-index="0">
+        <div class="rotulo" id="rot">Rotulo da cena</div>
+
+        <!-- frase 1 -->
+        <div class="titulo" id="t1" style="top: 380px">
+          <span class="p" data-layout-allow-overlap="true">frase</span>
+          <span class="p grifo" id="grifo1" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="g-clara">com grifo</span><span class="g-escura">com grifo</span></span>
+          <span class="p" data-layout-allow-overlap="true">em</span>
+          <span class="p" data-layout-allow-overlap="true">duas</span>
+          <span class="p" data-layout-allow-overlap="true">linhas</span>
+        </div>
+
+        <!-- a janela -->
+        <div id="palco">
+          <div id="janela" data-layout-allow-overflow="true">
+            <div class="chrome">
+              <i></i><i></i><i></i><span class="url" style="position: relative">
+                <span id="url-a">primeira-url.exemplo</span>
+                <span id="url-b" style="position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap"
+                  >segunda-url.exemplo</span
+                >
+              </span>
+            </div>
+            <div id="fresta">
+              <img class="pagina" id="pg-docs" src="assets/midia/PAGINA-A.png" alt="" />
+              <img class="pagina" id="pg-repo" src="assets/midia/PAGINA-B.png" alt="" />
+              <div id="video-slot">
+                <video
+                  id="clipe"
+                  class="clip"
+                  src="assets/midia/CLIPE.mp4"
+                  data-start="8.3"
+                  data-duration="3.5"
+                  data-track-index="1"
+                  muted
+                  playsinline
+                ></video>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="etiqueta" id="e1" style="top: 560px; left: 60px">etiqueta 1</div>
+        <div class="etiqueta" id="e2" style="top: 560px; right: 60px">etiqueta 2</div>
+        <div class="etiqueta" id="e3" style="top: 1320px; left: 60px">etiqueta 3</div>
+        <div class="etiqueta on" id="e4" style="top: 1320px; right: 60px">etiqueta 4</div>
+
+        <div id="comando"><b>comando</b> de exemplo aqui</div>
+
+        <!-- frase final -->
+        <div class="titulo" id="t2" style="top: 820px; font-size: 92px">
+          <span class="p" data-layout-allow-overlap="true">fecho</span>
+          <span class="p" data-layout-allow-overlap="true">em</span>
+          <span class="p" data-layout-allow-overlap="true">duas</span>
+          <span class="p grifo" id="grifo2" data-layout-allow-overlap="true" data-layout-allow-occlusion="true"><span class="g-clara">linhas</span><span class="g-escura">linhas</span></span>
+        </div>
+
+        <div id="rodape">Rodape</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // estado de visibilidade explicito no quadro zero, para o seek pra tras
+      tl.set(["#t1", "#palco", "#url-b"], { visibility: "visible" }, 0);
+
+      /* ---------- primitivas do projeto ---------- */
+      function palavrasSubindo(sel, t, passo) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 44, filter: "blur(7px)" },
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.42,
+            stagger: passo || 0.1,
+            ease: "power3.out",
+          },
+          t
+        );
+      }
+      function grifo(sel, t) {
+        tl.fromTo(sel, { "--w": 0 }, { "--w": 1, duration: 0.42, ease: "power3.out" }, t);
+      }
+      function quique(sel, t, dur) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, scale: 0.5 },
+          { opacity: 1, scale: 1, duration: dur || 0.4, ease: "back.out(2.8)" },
+          t
+        );
+      }
+      function entra(sel, t) {
+        tl.fromTo(
+          sel,
+          { opacity: 0, y: 22, filter: "blur(6px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.4, ease: "power3.out" },
+          t
+        );
+      }
+      // PRIMITIVA NOVA: a pagina rola de verdade dentro da fresta.
+      // A imagem e a captura inteira da pagina; a fresta corta. Deslocar em Y
+      // e o scroll. Deterministico e reversivel, ao contrario de gravar tela.
+      function rolaPagina(sel, t, de, ate, dur, ease) {
+        tl.fromTo(
+          sel,
+          { y: de },
+          { y: ate, duration: dur, ease: ease || "power1.inOut" },
+          t
+        );
+      }
+
+      /* ================= 0 a 2.4, a frase que aponta ================= */
+      entra("#rot", 0.1);
+      palavrasSubindo("#t1 .p", 0.3, 0.1);
+      grifo("#grifo1", 0.52);
+
+      // a primeira frase sai quando a janela chega: uma coisa por vez na tela
+      tl.to(
+        "#t1",
+        { opacity: 0, y: -46, filter: "blur(9px)", duration: 0.42, ease: "power2.in" },
+        2.18
+      );
+      tl.set("#t1", { visibility: "hidden" }, 2.62);
+
+      /* ================= 2.4 a 5.6, a doc oficial rolando ================= */
+      // a janela chega inclinada e vai assentando
+      tl.fromTo(
+        "#palco",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.45, ease: "power2.out" },
+        2.3
+      );
+      tl.fromTo(
+        "#janela",
+        { rotationX: 14, rotationY: -13, scale: 0.9, y: 70 },
+        { rotationX: 6, rotationY: -6, scale: 1, y: 0, duration: 0.85, ease: "power3.out" },
+        2.3
+      );
+      tl.fromTo("#pg-docs", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.4);
+      rolaPagina("#pg-docs", 2.55, 0, -1180, 2.7);
+
+      // o comando de instalacao ganha um beat proprio
+      quique("#comando", 3.5, 0.45);
+      tl.to("#comando", { opacity: 0, duration: 0.3, ease: "power2.in" }, 5.15);
+
+      /* ================= 5.6 a 8.3, troca pro repo, no mesmo lugar ======= */
+      // a fresta e a mesma: so o que esta dentro dela muda. Troca no mesmo lugar.
+      tl.to("#pg-docs", { opacity: 0, duration: 0.01, ease: "power1.out" }, 5.6);
+      tl.fromTo("#pg-repo", { opacity: 0 }, { opacity: 1, duration: 0.01, ease: "power1.out" }, 5.6);
+      tl.to("#url-a", { opacity: 0, duration: 0.12, ease: "power2.in" }, 5.5);
+      tl.fromTo("#url-b", { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "power2.out" }, 5.64);
+      rolaPagina("#pg-repo", 5.7, -60, -1560, 2.4);
+
+      // a janela gira um pouco pro outro lado, pra troca ter peso
+      tl.to("#janela", { rotationY: 6, rotationX: 4, duration: 0.7, ease: "power3.out" }, 5.6);
+
+      // as quatro etiquetas do assunto
+      quique("#e1", 6.0, 0.4);
+      quique("#e2", 6.16, 0.4);
+      quique("#e3", 6.32, 0.4);
+      quique("#e4", 6.48, 0.4);
+
+      /* ================= 8.3 a 12, ultima batida e fecho ================ */
+      // a mesma fresta troca a pagina pelo video
+      tl.to("#pg-repo", { opacity: 0, duration: 0.35, ease: "power2.inOut" }, 8.15);
+      tl.to("#video-slot", { opacity: 1, duration: 0.35, ease: "power2.inOut" }, 8.15);
+      // a saida termina ANTES da fronteira do clipe de video (8.3) e leva a
+      // morte dura logo em seguida, senao um seek pra tras deixa estado velho
+      tl.to("#url-b", { opacity: 0, duration: 0.18, ease: "power2.in" }, 8.02);
+      tl.set("#url-b", { visibility: "hidden" }, 8.2);
+      tl.to("#janela", { rotationY: 0, rotationX: 0, duration: 0.8, ease: "power3.out" }, 8.15);
+      tl.to(["#e1", "#e2", "#e3"], { opacity: 0, duration: 0.3, ease: "power2.in" }, 8.2);
+      tl.to("#e4", { opacity: 0, duration: 0.3, ease: "power2.in" }, 8.35);
+
+      tl.to("#palco", { opacity: 0, y: -70, duration: 0.5, ease: "power2.in" }, 9.35);
+      tl.set("#palco", { visibility: "hidden" }, 9.9);
+      tl.to("#rot", { opacity: 0, duration: 0.35, ease: "power2.in" }, 9.4);
+
+      palavrasSubindo("#t2 .p", 9.7, 0.1);
+      grifo("#grifo2", 9.95);
+      tl.fromTo("#rodape", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.out" }, 10.5);
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

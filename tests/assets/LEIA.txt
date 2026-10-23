@@ -1,0 +1,1 @@
+fala.m4a: voz sintetica do espeak-ng (pt-br), gerada para os testes. Sem direito de terceiros.
