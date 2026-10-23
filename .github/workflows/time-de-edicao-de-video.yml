@@ -23,7 +23,7 @@ jobs:
       run:
         shell: bash
     env:
-      FASTER_WHISPER_MODELO: small
+      FASTER_WHISPER_MODELO: large-v3-turbo   # o mesmo que o aluno usa; o small erra a voz sintetica do teste
       PYTHONUTF8: "0"
     steps:
       - uses: actions/checkout@v4
