@@ -185,7 +185,7 @@ Claude creates one working folder per video, runs the pre-flight once per sessio
 ## Tests
 
 ```bash
-python3 tests/rodar.py --rapido    # static, unit and integration tests, no render
+python3 tests/rodar.py --rapido    # quick run, skips rendering
 python3 tests/rodar.py             # everything except speech, HyperFrames and Chrome
 python3 tests/rodar.py --completo  # full suite, with speech, HyperFrames and Chrome
 ```
