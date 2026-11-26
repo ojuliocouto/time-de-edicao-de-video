@@ -202,7 +202,7 @@ Run the tests after any change to the skill. The GitHub Actions workflow runs th
 
 ## License
 
-This repository does not include a project-wide license yet. Bundled third-party components keep their own licenses:
+This project is released under the [MIT License](LICENSE). Bundled third-party components keep their own licenses:
 
 | Component | License | File |
 |---|---|---|
